@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Plus, RefreshCw, Search, Trash2, Edit2, AlertCircle, Shield } from "lucide-react";
+import { Plus, RefreshCw, Search, Trash2, Edit2, AlertCircle } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -226,6 +226,7 @@ export default function DNSPage({ params }: { params: Promise<{ zoneId: string }
   const [editing, setEditing] = useState<CFDNSRecord | undefined>(undefined);
   const [deleteTarget, setDeleteTarget] = useState<CFDNSRecord | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingProxy, setTogglingProxy] = useState<Set<string>>(new Set());
 
   useEffect(() => { params.then((p) => setZoneId(p.zoneId)); }, [params]);
 
@@ -272,6 +273,22 @@ export default function DNSPage({ params }: { params: Promise<{ zoneId: string }
   function openCreate() {
     setEditing(undefined);
     setShowModal(true);
+  }
+
+  async function handleProxyToggle(record: CFDNSRecord) {
+    if (!config?.apiToken || togglingProxy.has(record.id)) return;
+    setTogglingProxy((prev) => new Set(prev).add(record.id));
+    const res = await cfApiCall(config.apiToken, `/zones/${zoneId}/dns/${record.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ proxied: !record.proxied }),
+    });
+    setTogglingProxy((prev) => { const next = new Set(prev); next.delete(record.id); return next; });
+    if (res.success) {
+      toast.success(record.proxied ? "Proxy disabled" : "Proxy enabled");
+      load();
+    } else {
+      toast.error(res.errors?.[0]?.message ?? "Failed to update proxy status");
+    }
   }
 
   const filtered = records.filter((r) => {
@@ -355,15 +372,35 @@ export default function DNSPage({ params }: { params: Promise<{ zoneId: string }
             key: "name",
             header: "Name",
             cell: (r) => (
-              <div className="flex items-center gap-1.5">
-                <span className="font-mono text-xs text-[var(--text-primary)] max-w-[200px] truncate">{r.name}</span>
-                {r.proxied && (
-                  <span title="Proxied">
-                    <Shield className="h-3 w-3 text-[var(--cf-orange)]" />
-                  </span>
-                )}
-              </div>
+              <span className="font-mono text-xs text-[var(--text-primary)] max-w-[200px] truncate block">{r.name}</span>
             ),
+          },
+          {
+            key: "proxy",
+            header: "Proxy",
+            width: "72px",
+            cell: (r) => {
+              if (!r.proxiable) {
+                return <span className="text-xs text-[var(--text-muted)]" title="Not proxiable">—</span>;
+              }
+              const busy = togglingProxy.has(r.id);
+              return (
+                <button
+                  onClick={() => handleProxyToggle(r)}
+                  disabled={busy}
+                  title={r.proxied ? "Click to disable proxy" : "Click to enable proxy"}
+                  aria-label={r.proxied ? "Disable proxy" : "Enable proxy"}
+                  className="relative inline-flex shrink-0 items-center disabled:opacity-50 disabled:cursor-wait"
+                >
+                  <div className={`h-4 w-7 rounded-full transition-colors ${
+                    r.proxied ? "bg-[var(--cf-orange)]" : "bg-[var(--bg-overlay)]"
+                  }`} />
+                  <div className={`absolute top-0.5 left-0.5 h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                    r.proxied ? "translate-x-3" : ""
+                  }`} />
+                </button>
+              );
+            },
           },
           {
             key: "content",
@@ -402,7 +439,7 @@ export default function DNSPage({ params }: { params: Promise<{ zoneId: string }
                 </button>
                 <button
                   onClick={() => setDeleteTarget(r)}
-                  className="rounded p-1.5 text-[var(--text-tertiary)] hover:text-[var(--color-error)] hover:bg-[#3d1a1a]/30 transition-colors"
+                  className="rounded p-1.5 text-[var(--text-tertiary)] hover:text-[var(--color-error)] hover:bg-[var(--badge-error-bg)] transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>

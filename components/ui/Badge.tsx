@@ -6,12 +6,12 @@ type BadgeVariant = "success" | "error" | "warning" | "info" | "secondary" | "or
 type BadgeSize = "sm" | "md";
 
 const variantStyles: Record<BadgeVariant, string> = {
-  success: "bg-[#1a3d2b] text-[var(--color-success)] border border-[#2d6a4a]",
-  error: "bg-[#3d1a1a] text-[var(--color-error)] border border-[#6a2d2d]",
-  warning: "bg-[#3d2d0a] text-[var(--color-warning)] border border-[#6a4d1a]",
-  info: "bg-[#1a2d3d] text-[var(--color-info)] border border-[#2d4a6a]",
+  success: "bg-[var(--badge-success-bg)] text-[var(--color-success)] border border-[var(--badge-success-border)]",
+  error: "bg-[var(--badge-error-bg)] text-[var(--color-error)] border border-[var(--badge-error-border)]",
+  warning: "bg-[var(--badge-warning-bg)] text-[var(--color-warning)] border border-[var(--badge-warning-border)]",
+  info: "bg-[var(--badge-info-bg)] text-[var(--color-info)] border border-[var(--badge-info-border)]",
   secondary: "bg-[var(--bg-overlay)] text-[var(--text-secondary)] border border-[var(--border)]",
-  orange: "bg-[#3d1e0a] text-[var(--cf-orange)] border border-[#6a3d1a]",
+  orange: "bg-[var(--badge-orange-bg)] text-[var(--cf-orange)] border border-[var(--badge-orange-border)]",
 };
 
 const sizeStyles: Record<BadgeSize, string> = {

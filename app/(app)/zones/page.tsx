@@ -168,7 +168,7 @@ export default function ZonesPage() {
       </div>
 
       {error && (
-        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[var(--color-error)]/30 bg-[#3d1a1a]/30 px-4 py-3 text-sm text-[var(--color-error)]">
+        <div className="mb-4 flex items-center gap-3 rounded-lg border border-[var(--color-error)]/30 bg-[var(--badge-error-bg)] px-4 py-3 text-sm text-[var(--color-error)]">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>

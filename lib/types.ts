@@ -267,3 +267,38 @@ export interface CFConfig {
   accountId?: string;
   accountName?: string;
 }
+
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+export interface CFAuditLog {
+  id: string;
+  when: string;
+  action: {
+    type: string;
+    result: boolean;
+  };
+  actor: {
+    id: string;
+    email: string;
+    type: "user" | "admin" | "cloudflare" | "Cloudflare";
+    ip: string;
+  };
+  resource: {
+    type: string;
+    id: string;
+  };
+  zone: {
+    id: string;
+    name: string;
+  } | null;
+  newValue?: string;
+  oldValue?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// ─── Zone Analytics ───────────────────────────────────────────────────────────
+
+export interface CFAnalyticsDashboard {
+  totals: CFAnalyticsTotals;
+  timeseries: CFAnalyticsTotals[];
+}
