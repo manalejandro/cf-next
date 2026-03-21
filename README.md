@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CF Next
+
+A modern, full-featured Cloudflare management dashboard built with Next.js 16 and the Cloudflare API.
+
+## Features
+
+- **Zones** — Browse, search, add and delete domains
+- **DNS Records** — Full CRUD for all DNS record types (A, AAAA, CNAME, MX, TXT, SRV, CAA, etc.)
+- **Firewall** — View firewall rules and IP access rules per zone
+- **SSL/TLS** — Configure SSL mode, minimum TLS version, HSTS, Always HTTPS and more
+- **Cache** — Manage cache level, browser TTL, development mode and purge zone cache
+- **Settings** — Securely store and verify your Cloudflare API token
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | [Next.js 16](https://nextjs.org) (App Router) |
+| UI | [React 19](https://react.dev) + [Tailwind CSS v4](https://tailwindcss.com) |
+| Icons | [Lucide React](https://lucide.dev) |
+| Language | TypeScript |
+| API | [Cloudflare API v4](https://developers.cloudflare.com/api) |
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone and install dependencies
+
+```bash
+git clone <repository-url>
+cd cf-next
+npm install
+```
+
+### 2. Start the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Configure your API token
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Navigate to **Settings** in the sidebar (or click **Connect API Token** on first launch)
+2. Paste your Cloudflare API token
+3. Click **Verify Token** to confirm it works
+4. Select your default account
+5. Click **Save Settings**
 
-## Learn More
+> Your token is stored only in your browser's localStorage and is never sent anywhere except Cloudflare's API.
 
-To learn more about Next.js, take a look at the following resources:
+## Creating a Cloudflare API Token
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Go to [Cloudflare Dashboard → My Profile → API Tokens](https://dash.cloudflare.com/profile/api-tokens)
+2. Click **Create Token**
+3. Use **Custom Token** with the following permissions:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Resource | Permission |
+|----------|-----------|
+| Zone | Read |
+| Zone | Edit |
+| DNS | Read |
+| DNS | Edit |
+| Firewall Services | Read |
+| Firewall Services | Edit |
+| Zone Settings | Read |
+| Zone Settings | Edit |
+| Cache Purge | Purge |
 
-## Deploy on Vercel
+4. Under **Zone Resources**, set to **All zones** (or specific zones)
+5. Click **Continue to summary** → **Create Token**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Architecture
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+Browser
+  │
+  │  fetch('/api/cf/*', { headers: { 'x-cf-token': token } })
+  ▼
+Next.js API Routes  (app/api/cf/*)
+  │
+  │  fetch('https://api.cloudflare.com/client/v4/*', { 'Authorization': 'Bearer ...' })
+  ▼
+Cloudflare API v4
+```
+
+The client never calls Cloudflare directly. All requests are proxied through Next.js API routes, keeping the token off public network tabs.
+
+### Key directories
+
+```
+cf-next/
+├── app/
+│   ├── (app)/               # Main app (dashboard, zones, settings)
+│   │   ├── page.tsx          # Dashboard
+│   │   ├── zones/            # Zone list + per-zone pages
+│   │   │   └── [zoneId]/
+│   │   │       ├── page.tsx  # Zone overview
+│   │   │       ├── dns/      # DNS records
+│   │   │       ├── firewall/ # Firewall rules
+│   │   │       ├── ssl/      # SSL/TLS settings
+│   │   │       └── cache/    # Cache settings
+│   │   ├── settings/         # API token settings
+│   │   └── activity/         # Activity log (coming soon)
+│   └── api/cf/              # Cloudflare API proxy routes
+├── components/
+│   ├── ui/                  # Reusable UI (Button, Card, Table, Modal…)
+│   ├── layout/              # Sidebar, PageHeader
+│   ├── AppShell.tsx         # Auth gate + layout wrapper
+│   └── ConfigProvider.tsx   # API token context
+├── hooks/
+│   └── useCFApi.ts          # CF API fetch helper
+└── lib/
+    ├── types.ts             # TypeScript types for CF API
+    ├── cloudflare.ts        # Server-side CF API client
+    └── utils.ts             # Formatters, config helpers
+```
+
+## Development
+
+```bash
+# Development server
+npm run dev
+
+# Type checking
+npm run build
+
+# Lint
+npm run lint
+```
+
+## Security Notes
+
+- API tokens are stored in `localStorage` — this is a local development tool, not a multi-user SaaS
+- Tokens are never logged or sent to any third-party server
+- The Next.js proxy layer prevents the raw token from appearing in browser DevTools network tabs on CF API calls
+- `robots: { index: false }` is set in metadata — this app should not be indexed by search engines
+
+## License
+
+MIT

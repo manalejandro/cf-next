@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40" fill="none">
+  <!-- Icon mark -->
+  <rect width="40" height="40" rx="9" fill="#0d1117"/>
+  <path d="M30 18c0-5.523-4.477-10-10-10a9.96 9.96 0 0 0-7.07 2.93A6.5 6.5 0 1 0 9 28h19a2 2 0 0 0 0-4h-.08A10.02 10.02 0 0 0 30 18z" fill="#F48120"/>
+  <path d="M16 20l2.5 2.5 5.5-5.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Text: CF Next -->
+  <text x="52" y="27" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="18" fill="#e6edf3">CF</text>
+  <text x="80" y="27" font-family="system-ui, -apple-system, sans-serif" font-weight="300" font-size="18" fill="#8b949e">Next</text>
+</svg>

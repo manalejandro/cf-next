@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#0d1117"/>
+  <!-- Cloud shape -->
+  <path d="M46 36c0-5.523-4.477-10-10-10a9.96 9.96 0 0 0-6.737 2.607A7.5 7.5 0 1 0 21.5 43H44a2 2 0 0 0 0-4h-2v-.057c2.327-.52 4-2.616 4-5.07V36z" fill="none"/>
+  <!-- CF lightning bolt / cloud + check mark design -->
+  <path d="M48 34c0-7.18-5.82-13-13-13a12.95 12.95 0 0 0-9.17 3.81A9 9 0 1 0 18 42h28a4 4 0 0 0 0-8h-.18A13.02 13.02 0 0 0 48 34z" fill="#F48120"/>
+  <path d="M27 34l3 3 7-7" stroke="#0d1117" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
