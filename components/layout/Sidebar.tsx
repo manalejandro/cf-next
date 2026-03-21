@@ -10,12 +10,14 @@ import {
   Activity,
   Sun,
   Moon,
+  Cpu,
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/zones", label: "Zones", icon: Globe },
+  { href: "/workers", label: "Workers", icon: Cpu },
   { href: "/activity", label: "Activity", icon: Activity },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

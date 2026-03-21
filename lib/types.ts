@@ -302,3 +302,77 @@ export interface CFAnalyticsDashboard {
   totals: CFAnalyticsTotals;
   timeseries: CFAnalyticsTotals[];
 }
+
+// ─── Workers ──────────────────────────────────────────────────────────────────
+
+export type WorkerUsageModel = "bundled" | "unbound" | "standard";
+export type WorkerPlacementMode = "smart" | "off";
+
+export interface CFWorkerScript {
+  id: string;
+  etag?: string;
+  handlers?: string[];
+  modified_on: string;
+  created_on: string;
+  usage_model?: WorkerUsageModel;
+  compatibility_date?: string;
+  compatibility_flags?: string[];
+  placement?: { mode?: WorkerPlacementMode };
+  last_deployed_from?: string;
+  tail_consumers?: { service: string; environment?: string; namespace?: string }[];
+  logpush?: boolean;
+}
+
+export type CFWorkerBinding =
+  | { type: "plain_text"; name: string; text: string }
+  | { type: "secret_text"; name: string }
+  | { type: "kv_namespace"; name: string; namespace_id: string }
+  | { type: "r2_bucket"; name: string; bucket_name: string }
+  | { type: "service"; name: string; service: string; environment?: string }
+  | { type: "d1"; name: string; id: string }
+  | { type: "ai"; name: string }
+  | { type: "queue"; name: string; queue_name: string }
+  | { type: "analytics_engine"; name: string; dataset: string }
+  | { type: string; name: string; [key: string]: unknown };
+
+export interface CFWorkerSettings {
+  bindings?: CFWorkerBinding[];
+  compatibility_date?: string;
+  compatibility_flags?: string[];
+  usage_model?: WorkerUsageModel;
+  tail_consumers?: { service: string; environment?: string; namespace?: string }[];
+  placement?: { mode?: WorkerPlacementMode };
+  logpush?: boolean;
+}
+
+export interface CFWorkerSchedule {
+  cron: string;
+  created_on?: string;
+  modified_on?: string;
+}
+
+export interface CFWorkerTail {
+  id: string;
+  url: string;
+  expires_at: string;
+}
+
+export interface CFWorkerTailMessage {
+  outcome: "ok" | "exception" | "exceededCpu" | "exceededMemory" | "canceled" | "unknown";
+  scriptName: string;
+  exceptions: { name: string; message: string; timestamp: number }[];
+  logs: { message: unknown[]; level: string; timestamp: number }[];
+  eventTimestamp: number | null;
+  event?: {
+    request?: {
+      url: string;
+      method: string;
+      headers: Record<string, string>;
+      cf?: Record<string, unknown>;
+    };
+    response?: { status: number };
+    scheduledTime?: string;
+    cron?: string;
+    [key: string]: unknown;
+  };
+}
