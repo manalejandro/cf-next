@@ -9,7 +9,8 @@ A modern, full-featured Cloudflare management dashboard built with Next.js and t
 - **Firewall** — View firewall rules and IP access rules per zone
 - **SSL/TLS** — Configure SSL mode, minimum TLS version, HSTS, Always HTTPS and more
 - **Cache** — Manage cache level, browser TTL, development mode and purge zone cache
-- **Workers** — List deployed workers, inspect configuration and bindings, edit runtime settings, and stream live logs via WebSocket tail
+- **Workers** — List workers with handler/usage badges, inspect bindings, edit runtime settings, delete workers, view custom domains, stream live logs (WebSocket tail) and query observability telemetry (events & invocations)
+- **MCP** — Browse and execute tools from 16 Cloudflare MCP servers (observability, docs, radar, AI gateway, builds, bindings, containers, and more)
 - **Activity** — Audit log viewer (account events) and zone traffic analytics dashboard
 - **Settings** — Securely store and verify your Cloudflare API token
 - **Light/Dark mode** — Full theme support with correct styling in both modes
@@ -73,8 +74,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | Account Settings | Read *(for Audit Logs)* |
 | Zone Analytics | Read *(for Analytics tab)* |
 | Workers Scripts | Read *(for Workers list & overview)* |
-| Workers Scripts | Edit *(for Workers settings PATCH)* |
+| Workers Scripts | Edit *(for Workers settings PATCH & delete)* |
 | Workers Tail | Read *(for live log streaming)* |
+| Workers Observability | Read *(for observability telemetry)* |
 
 4. Under **Zone Resources**, set to **All zones** (or specific zones)
 5. Click **Continue to summary** → **Create Token**
@@ -112,19 +114,24 @@ cf-next/
 │   │   ├── workers/          # Workers list + per-worker pages
 │   │   │   └── [scriptName]/
 │   │   │       ├── page.tsx  # Worker overview (bindings, handlers, schedules)
-│   │   │       ├── settings/ # Runtime settings editor
-│   │   │       └── logs/     # Live log tail (WebSocket)
+│   │   │       ├── settings/ # Runtime settings, custom domains, delete worker
+│   │   │       └── logs/     # Live log tail (WebSocket) + observability telemetry
+│   │   ├── mcp/              # Cloudflare MCP server explorer & tool executor
 │   │   ├── settings/         # API token configuration
 │   │   └── activity/         # Audit log + zone analytics dashboard
 │   └── api/cf/               # Cloudflare API proxy routes
 │       ├── accounts/
 │       │   └── [accountId]/
 │       │       ├── audit_logs/       # Account audit events
-│       │       └── workers/          # Workers list + per-script routes
+│       │       └── workers/
+│       │           ├── domains/      # Worker custom domains (filterable by service)
+│       │           ├── observability/# Workers observability telemetry query
 │       │           └── [scriptName]/
 │       │               ├── settings/ # Worker settings
 │       │               ├── schedules/# Cron triggers
+│       │               ├── domains/  # Per-worker domains
 │       │               └── tails/    # Log tail sessions
+│   └── api/mcp/              # Cloudflare MCP protocol proxy (SSRF-protected)
 │       └── zones/[zoneId]/
 │           ├── dns/          # DNS records CRUD
 │           ├── firewall/     # Firewall rules + access rules

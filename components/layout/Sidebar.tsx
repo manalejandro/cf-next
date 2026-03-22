@@ -11,6 +11,7 @@ import {
   Sun,
   Moon,
   Cpu,
+  Bot,
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
 
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/zones", label: "Zones", icon: Globe },
   { href: "/workers", label: "Workers", icon: Cpu },
   { href: "/activity", label: "Activity", icon: Activity },
+  { href: "/mcp", label: "MCP", icon: Bot },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

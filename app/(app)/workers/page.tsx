@@ -9,6 +9,13 @@ import {
   ChevronRight,
   AlertCircle,
   Clock,
+  Calendar,
+  Globe,
+  Mail,
+  MessageSquare,
+  Bell,
+  Zap,
+  Radio,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -19,11 +26,59 @@ import { cfApiCall } from "@/hooks/useCFApi";
 import type { CFWorkerScript } from "@/lib/types";
 import { formatRelativeTime } from "@/lib/utils";
 
-const USAGE_MODEL_LABEL: Record<string, string> = {
-  standard: "Standard",
-  bundled: "Bundled",
-  unbound: "Unbound",
+// ─── Handler config ───────────────────────────────────────────────────────────
+
+const HANDLER_CONFIG: Record<
+  string,
+  { label: string; icon: React.ElementType; color: string }
+> = {
+  fetch:     { label: "fetch",     icon: Globe,         color: "text-[var(--cf-orange)]    bg-[var(--badge-orange-bg)]   border-[var(--badge-orange-border)]" },
+  scheduled: { label: "cron",      icon: Clock,         color: "text-[var(--color-info)]   bg-[var(--badge-info-bg)]    border-[var(--badge-info-border)]" },
+  email:     { label: "email",     icon: Mail,          color: "text-[var(--color-success)] bg-[var(--badge-success-bg)] border-[var(--badge-success-border)]" },
+  queue:     { label: "queue",     icon: MessageSquare, color: "text-purple-400             bg-purple-900/20              border-purple-800/40" },
+  alarm:     { label: "alarm",     icon: Bell,          color: "text-[var(--color-warning)] bg-[var(--badge-warning-bg)] border-[var(--badge-warning-border)]" },
+  rpc:       { label: "rpc",       icon: Radio,         color: "text-[var(--color-info)]   bg-[var(--badge-info-bg)]    border-[var(--badge-info-border)]" },
+  tail:      { label: "tail",      icon: Zap,           color: "text-[var(--text-tertiary)] bg-[var(--bg-overlay)]       border-[var(--border-subtle)]" },
 };
+
+function HandlerBadge({ handler }: { handler: string }) {
+  const cfg = HANDLER_CONFIG[handler] ?? {
+    label: handler,
+    icon: Zap,
+    color: "text-[var(--text-tertiary)] bg-[var(--bg-overlay)] border-[var(--border-subtle)]",
+  };
+  const Icon = cfg.icon;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-medium ${cfg.color}`}
+    >
+      <Icon className="h-2.5 w-2.5" />
+      {cfg.label}
+    </span>
+  );
+}
+
+// ─── Usage model badge ────────────────────────────────────────────────────────
+
+const USAGE_COLORS: Record<string, string> = {
+  standard: "text-[var(--color-success)] bg-[var(--badge-success-bg)] border-[var(--badge-success-border)]",
+  bundled:  "text-[var(--color-info)]    bg-[var(--badge-info-bg)]    border-[var(--badge-info-border)]",
+  unbound:  "text-[var(--color-warning)] bg-[var(--badge-warning-bg)] border-[var(--badge-warning-border)]",
+};
+
+function UsageBadge({ model }: { model?: string }) {
+  if (!model) return <span className="text-[var(--text-tertiary)] text-xs">—</span>;
+  const classes =
+    USAGE_COLORS[model] ??
+    "text-[var(--text-secondary)] bg-[var(--bg-overlay)] border-[var(--border)]";
+  return (
+    <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[10px] font-medium capitalize ${classes}`}>
+      {model}
+    </span>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function WorkersPage() {
   const { config } = useConfig();
@@ -120,7 +175,7 @@ export default function WorkersPage() {
       {loading ? (
         <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-14 animate-pulse rounded-xl bg-[var(--bg-elevated)]" />
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-[var(--bg-elevated)]" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -131,75 +186,93 @@ export default function WorkersPage() {
           </p>
         </Card>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--border)]">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--border)] bg-[var(--bg-elevated)]">
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
-                  Name
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">
-                  Handlers
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] hidden md:table-cell">
-                  Usage Model
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] hidden lg:table-cell">
-                  Compat Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] hidden lg:table-cell">
-                  Modified
-                </th>
-                <th className="w-10 px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((script) => (
-                <tr
+        <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
+          {/* Column headers */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+              Worker
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] hidden md:block w-40">
+              Handlers
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] hidden md:block w-20 text-center">
+              Model
+            </span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] hidden lg:block w-24 text-right">
+              Created
+            </span>
+            <span className="w-5" />
+          </div>
+
+          {/* Rows */}
+          <div className="divide-y divide-[var(--border-subtle)]">
+            {filtered.map((script) => {
+              const handlers = script.handlers ?? ["fetch"];
+              return (
+                <Link
                   key={script.id}
-                  className="group border-b border-[var(--border-subtle)] last:border-0 hover:bg-[var(--bg-elevated)] transition-colors"
+                  href={`/workers/${encodeURIComponent(script.id)}`}
+                  className="group grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 items-center px-4 py-3.5 hover:bg-[var(--bg-elevated)] transition-colors"
                 >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/workers/${encodeURIComponent(script.id)}`}
-                      className="font-mono text-xs font-medium text-[var(--text-primary)] hover:text-[var(--cf-orange)] transition-colors"
-                    >
-                      {script.id}
-                    </Link>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {(script.handlers ?? ["fetch"]).map((h) => (
-                        <span
-                          key={h}
-                          className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--text-secondary)]"
-                        >
-                          {h}
+                  {/* Name + meta */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--cf-orange)] transition-colors truncate">
+                        {script.id}
+                      </span>
+                      {script.compatibility_date && (
+                        <span className="hidden sm:inline-flex rounded border border-[var(--border-subtle)] bg-[var(--bg-overlay)] px-1.5 py-0.5 font-mono text-[9px] text-[var(--text-tertiary)]">
+                          {script.compatibility_date}
                         </span>
-                      ))}
+                      )}
                     </div>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-[var(--text-secondary)] hidden md:table-cell">
-                    {USAGE_MODEL_LABEL[script.usage_model ?? ""] ?? script.usage_model ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-xs text-[var(--text-tertiary)] hidden lg:table-cell">
-                    {script.compatibility_date ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-[var(--text-tertiary)] hidden lg:table-cell">
-                    <span title={script.modified_on} className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {formatRelativeTime(script.modified_on)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/workers/${encodeURIComponent(script.id)}`}>
-                      <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] group-hover:text-[var(--text-secondary)] transition-colors" />
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-[var(--text-tertiary)]">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatRelativeTime(script.modified_on)}
+                      </span>
+                      {script.logpush && (
+                        <span className="rounded border border-[var(--border-subtle)] bg-[var(--bg-overlay)] px-1 py-0 text-[9px]">
+                          logpush
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Handlers */}
+                  <div className="hidden md:flex flex-wrap gap-1 w-40">
+                    {handlers.slice(0, 3).map((h) => (
+                      <HandlerBadge key={h} handler={h} />
+                    ))}
+                    {handlers.length > 3 && (
+                      <span className="text-[10px] text-[var(--text-tertiary)]">
+                        +{handlers.length - 3}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Usage model */}
+                  <div className="hidden md:flex w-20 justify-center">
+                    <UsageBadge model={script.usage_model} />
+                  </div>
+
+                  {/* Created */}
+                  <div className="hidden lg:flex w-24 justify-end items-center gap-1 text-[10px] text-[var(--text-tertiary)]">
+                    <Calendar className="h-3 w-3 shrink-0" />
+                    <span title={script.created_on}>{formatRelativeTime(script.created_on)}</span>
+                  </div>
+
+                  {/* Arrow */}
+                  <ChevronRight className="h-4 w-4 text-[var(--text-tertiary)] group-hover:text-[var(--cf-orange)] transition-colors shrink-0 w-5" />
+                </Link>
+              );
+            })}
+          </div>
+
+          {/* Footer */}
+          <div className="border-t border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-4 py-2 text-[10px] text-[var(--text-tertiary)]">
+            {filtered.length} of {scripts.length} worker{scripts.length !== 1 ? "s" : ""}
+          </div>
         </div>
       )}
     </div>

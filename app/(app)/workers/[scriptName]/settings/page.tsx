@@ -1,20 +1,24 @@
 "use client";
 
 import { useEffect, useState, useCallback, use } from "react";
+import { useRouter } from "next/navigation";
 import {
   Save,
   RefreshCw,
   AlertCircle,
   CheckCircle,
   Info,
+  Globe,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Input";
+import { ConfirmModal } from "@/components/ui/Modal";
 import { useConfig } from "@/components/ConfigProvider";
 import { useToast } from "@/components/ui/Toast";
 import { cfApiCall } from "@/hooks/useCFApi";
-import type { CFWorkerSettings, WorkerUsageModel, WorkerPlacementMode } from "@/lib/types";
+import type { CFWorkerSettings, CFWorkerDomain, WorkerUsageModel, WorkerPlacementMode } from "@/lib/types";
 
 export default function WorkerSettingsPage({
   params,
@@ -26,16 +30,35 @@ export default function WorkerSettingsPage({
   const { scriptName } = use(params);
   const decodedName = decodeURIComponent(scriptName);
 
+  const router = useRouter();
+
   const [settings, setSettings] = useState<CFWorkerSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [domains, setDomains] = useState<CFWorkerDomain[]>([]);
+  const [domainsLoading, setDomainsLoading] = useState(false);
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [compatDate, setCompatDate] = useState("");
   const [usageModel, setUsageModel] = useState<WorkerUsageModel>("standard");
   const [placement, setPlacement] = useState<WorkerPlacementMode>("off");
   const [logpush, setLogpush] = useState(false);
+
+  const loadDomains = useCallback(async () => {
+    if (!config?.apiToken || !config?.accountId) return;
+    setDomainsLoading(true);
+    const res = await cfApiCall(
+      config.apiToken,
+      `/accounts/${config.accountId}/workers/domains?service=${encodeURIComponent(decodedName)}`
+    );
+    if (res.success) setDomains((res.result as CFWorkerDomain[]) ?? []);
+    setDomainsLoading(false);
+  }, [config, decodedName]);
 
   const load = useCallback(async () => {
     if (!config?.apiToken || !config?.accountId) return;
@@ -60,7 +83,26 @@ export default function WorkerSettingsPage({
 
   useEffect(() => {
     load();
-  }, [load]);
+    loadDomains();
+  }, [load, loadDomains]);
+
+  async function handleDelete() {
+    if (!config?.apiToken || !config?.accountId) return;
+    setDeleting(true);
+    const res = await cfApiCall(
+      config.apiToken,
+      `/accounts/${config.accountId}/workers/scripts/${decodedName}`,
+      { method: "DELETE" }
+    );
+    setDeleting(false);
+    if (res.success) {
+      toast.success(`Worker "${decodedName}" deleted`);
+      router.push("/workers");
+    } else {
+      toast.error(res.errors?.[0]?.message ?? "Failed to delete worker");
+      setShowDeleteModal(false);
+    }
+  }
 
   async function handleSave() {
     if (!config?.apiToken || !config?.accountId) return;
@@ -258,6 +300,85 @@ export default function WorkerSettingsPage({
           Script content can only be updated via Wrangler CLI or the Workers API — changes here only affect metadata settings.
         </p>
       </div>
+
+      {/* Custom Domains */}
+      <Card>
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-[var(--text-tertiary)]" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Custom Domains</h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<RefreshCw className="h-3.5 w-3.5" />}
+            onClick={loadDomains}
+            loading={domainsLoading}
+          />
+        </div>
+        {domainsLoading ? (
+          <div className="space-y-2">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-10 animate-pulse rounded-lg bg-[var(--bg-elevated)]" />
+            ))}
+          </div>
+        ) : domains.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">
+            No custom domains are linked to this worker.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {domains.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-3 py-2"
+              >
+                <span className="font-mono text-xs font-medium text-[var(--text-primary)]">
+                  {d.hostname}
+                </span>
+                <div className="flex items-center gap-2">
+                  {d.zone_name && (
+                    <span className="rounded-md bg-[var(--bg-overlay)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)]">
+                      {d.zone_name}
+                    </span>
+                  )}
+                  <span className="rounded-md bg-[var(--badge-info-bg)] border border-[var(--badge-info-border)] px-1.5 py-0.5 text-[10px] text-[var(--color-info)]">
+                    {d.environment}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="border-[var(--badge-error-border)]">
+        <div className="mb-3">
+          <h2 className="text-sm font-semibold text-[var(--color-error)]">Danger Zone</h2>
+          <p className="text-xs text-[var(--text-tertiary)] mt-0.5">
+            Permanently delete this worker and all its settings.
+          </p>
+        </div>
+        <Button
+          variant="danger"
+          size="sm"
+          icon={<Trash2 className="h-3.5 w-3.5" />}
+          onClick={() => setShowDeleteModal(true)}
+        >
+          Delete Worker
+        </Button>
+      </Card>
+
+      <ConfirmModal
+        open={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title={`Delete "${decodedName}"?`}
+        description={`This will permanently delete the worker "${decodedName}" and all its associated settings. This action cannot be undone.`}
+        confirmLabel="Delete Worker"
+        loading={deleting}
+      />
     </div>
   );
 }

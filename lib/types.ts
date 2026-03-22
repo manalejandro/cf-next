@@ -376,3 +376,97 @@ export interface CFWorkerTailMessage {
     [key: string]: unknown;
   };
 }
+
+// ─── Worker Custom Domains ────────────────────────────────────────────────────
+
+export interface CFWorkerDomain {
+  id: string;
+  hostname: string;
+  service: string;
+  environment: string;
+  zone_id: string;
+  zone_name: string;
+}
+
+// ─── Workers Observability Telemetry ─────────────────────────────────────────
+
+export interface CFObservabilityEventMeta {
+  id: string;
+  requestId?: string;
+  traceId?: string;
+  spanId?: string;
+  trigger?: string;
+  parentSpanId?: string;
+  service?: string;
+  level?: string;
+  duration?: number;
+  statusCode?: number;
+  traceDuration?: number;
+  error?: string;
+  message?: string;
+  spanName?: string;
+  url?: string;
+  origin?: string;
+}
+
+export interface CFObservabilityEventWorkers {
+  outcome: string;
+  scriptName: string;
+  eventType: string;
+  cpuTimeMs?: number;
+  wallTimeMs?: number;
+  requestId: string;
+  entrypoint?: string;
+  executionModel?: string;
+  event?: {
+    request?: { url?: string; method?: string; path?: string };
+    response?: { status?: number };
+  };
+}
+
+export interface CFObservabilityEvent {
+  dataset: string;
+  timestamp: number;
+  source: string | Record<string, unknown>;
+  $metadata: CFObservabilityEventMeta;
+  $workers?: CFObservabilityEventWorkers;
+}
+
+export interface CFObservabilityResult {
+  events?: {
+    events?: CFObservabilityEvent[];
+    count?: number;
+    fields?: { key: string; type: string }[];
+  };
+  invocations?: Record<string, CFObservabilityEvent[]>;
+  statistics?: {
+    elapsed: number;
+    rows_read: number;
+    bytes_read: number;
+  };
+}
+
+// ─── MCP Types ────────────────────────────────────────────────────────────────
+
+export interface MCPProperty {
+  type?: string;
+  description?: string;
+  enum?: string[];
+  default?: unknown;
+  items?: MCPProperty;
+  properties?: Record<string, MCPProperty>;
+  required?: string[];
+}
+
+export interface MCPInputSchema {
+  type: string;
+  properties?: Record<string, MCPProperty>;
+  required?: string[];
+  description?: string;
+}
+
+export interface MCPTool {
+  name: string;
+  description?: string;
+  inputSchema?: MCPInputSchema;
+}
