@@ -186,6 +186,14 @@ const TIME_RANGES = [
 
 type TimeRangeLabel = (typeof TIME_RANGES)[number]["label"];
 
+const AUTO_REFRESH_OPTIONS = [
+  { label: "Off", value: 0 },
+  { label: "10s", value: 10 },
+  { label: "30s", value: 30 },
+  { label: "1m",  value: 60 },
+  { label: "5m",  value: 300 },
+] as const;
+
 function getTimeframe(label: TimeRangeLabel) {
   const minutes = TIME_RANGES.find((r) => r.label === label)!.minutes;
   const to = Date.now();
@@ -423,7 +431,9 @@ export default function WorkerLogsPage({
   const [obsEvents, setObsEvents] = useState<CFObservabilityEvent[]>([]);
   const [obsInvocations, setObsInvocations] = useState<Record<string, CFObservabilityEvent[]>>({});
   const [obsLoading, setObsLoading] = useState(false);
-  const [obsError, setObsError] = useState<string | null>(null)
+  const [obsError, setObsError] = useState<string | null>(null);
+  const [obsAutoRefresh, setObsAutoRefresh] = useState<number>(0);
+  const [obsCountdown, setObsCountdown] = useState<number>(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const tailRef = useRef<CFWorkerTail | null>(null);
@@ -431,6 +441,7 @@ export default function WorkerLogsPage({
   const statusRef = useRef<ConnStatus>("idle");
   // Guard against concurrent connect() calls (React may call the same handler twice)
   const connectingRef = useRef(false);
+  const obsAutoRefreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function updateStatus(s: ConnStatus) {
     statusRef.current = s;
@@ -483,6 +494,38 @@ export default function WorkerLogsPage({
     setObsLoading(false);
   }, [config, decodedName]);
 
+  // ─── Auto-refresh ─────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (obsAutoRefreshIntervalRef.current) {
+      clearInterval(obsAutoRefreshIntervalRef.current);
+      obsAutoRefreshIntervalRef.current = null;
+    }
+    if (obsAutoRefresh === 0 || activeTab !== "observability") {
+      setObsCountdown(0);
+      return;
+    }
+
+    let countdown = obsAutoRefresh;
+    setObsCountdown(countdown);
+
+    obsAutoRefreshIntervalRef.current = setInterval(() => {
+      countdown -= 1;
+      if (countdown <= 0) {
+        countdown = obsAutoRefresh;
+        loadObservability(obsTimeRange, obsView);
+      }
+      setObsCountdown(countdown);
+    }, 1000);
+
+    return () => {
+      if (obsAutoRefreshIntervalRef.current) {
+        clearInterval(obsAutoRefreshIntervalRef.current);
+        obsAutoRefreshIntervalRef.current = null;
+      }
+    };
+  }, [obsAutoRefresh, activeTab, obsTimeRange, obsView, loadObservability]);
+
   // ─── Cleanup on unmount ───────────────────────────────────────────────────
 
   const configRef = useRef(config);
@@ -510,6 +553,10 @@ export default function WorkerLogsPage({
         tailRef.current = null;
       }
       connectingRef.current = false;
+      if (obsAutoRefreshIntervalRef.current) {
+        clearInterval(obsAutoRefreshIntervalRef.current);
+        obsAutoRefreshIntervalRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -855,6 +902,31 @@ export default function WorkerLogsPage({
             >
               Refresh
             </Button>
+
+            {/* Auto-refresh */}
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-[10px] text-[var(--text-tertiary)] shrink-0">Auto:</span>
+              <div className="flex items-center rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden">
+                {AUTO_REFRESH_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setObsAutoRefresh(opt.value)}
+                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      obsAutoRefresh === opt.value
+                        ? "bg-[var(--cf-orange)] text-white"
+                        : "text-[var(--text-secondary)] hover:bg-[var(--bg-overlay)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {obsAutoRefresh > 0 && (
+                <span className="font-mono text-[10px] text-[var(--text-tertiary)] min-w-[2.5rem]">
+                  {obsCountdown}s
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Error */}
@@ -874,13 +946,21 @@ export default function WorkerLogsPage({
                   {obsView} — last {obsTimeRange}
                 </span>
               </div>
-              {!obsLoading && (
-                <span className="text-[10px] text-[var(--text-tertiary)]">
-                  {obsView === "events"
-                    ? `${obsEvents.length} event${obsEvents.length !== 1 ? "s" : ""}`
-                    : `${invocationEntries.length} invocation${invocationEntries.length !== 1 ? "s" : ""}`}
-                </span>
-              )}
+              <div className="flex items-center gap-3">
+                {obsAutoRefresh > 0 && (
+                  <span className="flex items-center gap-1.5 text-[10px] text-[var(--color-info)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-info)] animate-pulse" />
+                    auto
+                  </span>
+                )}
+                {!obsLoading && (
+                  <span className="text-[10px] text-[var(--text-tertiary)]">
+                    {obsView === "events"
+                      ? `${obsEvents.length} event${obsEvents.length !== 1 ? "s" : ""}`
+                      : `${invocationEntries.length} invocation${invocationEntries.length !== 1 ? "s" : ""}`}
+                  </span>
+                )}
+              </div>
             </div>
 
             {obsLoading ? (
